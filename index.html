@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GradasMen! - Solid Physics</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white;}
+        
+        /* UI General */
+        button { font-family: 'Segoe UI', sans-serif; user-select: none; }
+        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20, 30, 50, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 50; transition: opacity 0.3s; }
+        .hidden { display: none !important; }
+        
+        h1 { font-size: 60px; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 5px; text-shadow: 4px 4px 0px #3366ff; color: #fff; transform: skew(-5deg); }
+        h2 { border-bottom: 2px solid #5588ff; padding-bottom: 5px; margin-bottom: 15px; width: 100%; font-size: 20px;}
+
+        .menu-btn { background: transparent; border: 3px solid white; color: white; padding: 15px 40px; font-size: 24px; margin: 10px; cursor: pointer; min-width: 250px; text-transform: uppercase; font-weight: bold; transition: transform 0.1s, background 0.1s; }
+        .menu-btn:hover, .menu-btn:focus { background: white; color: #3366ff; transform: scale(1.1); outline: none; box-shadow: 0 0 20px rgba(255,255,255,0.5); }
+        
+        /* Ajustes RGB Panel */
+        #settings-overlay { background: rgba(0, 0, 0, 0.4); justify-content: flex-start; align-items: flex-start; padding-left: 5%; }
+        .settings-panel { background: rgba(20, 30, 50, 0.95); padding: 25px; border-radius: 15px; text-align: center; width: 350px; margin-top: 30px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 10px 10px 30px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto; }
+        
+        .rgb-section { margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; }
+        .rgb-row { display: flex; align-items: center; margin: 5px 0; font-size: 14px; }
+        .rgb-label { width: 30px; font-weight: bold; }
+        .rgb-val { width: 30px; text-align: right; font-family: monospace; }
+        
+        /* SLIDER STYLES & FOCUS FEEDBACK */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 0 10px; height: 20px; border-radius: 5px; border: 2px solid transparent; transition: all 0.1s;}
+        
+        /* ESTILO CUANDO EL CONTROL ESTÁ ENCIMA (FOCUS) */
+        input[type=range]:focus { 
+            outline: none; 
+            border: 2px solid #ffff00; /* Borde Amarillo Brillante */
+            background: rgba(255, 255, 255, 0.15); /* Fondo iluminado */
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+            transform: scale(1.02);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #ffffff; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        
+        /* Colores de las pistas */
+        .slider-r::-webkit-slider-runnable-track { background: linear-gradient(to right, #300, #f00); }
+        .slider-g::-webkit-slider-runnable-track { background: linear-gradient(to right, #030, #0f0); }
+        .slider-b::-webkit-slider-runnable-track { background: linear-gradient(to right, #003, #00f); }
+
+        .preview-box { height: 20px; border-radius: 4px; border: 1px solid white; margin-bottom: 5px; font-size: 12px; line-height: 20px; text-shadow: 1px 1px 1px black; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; margin: 5px 0; font-size: 14px;}
+        .bind-btn { padding: 5px 10px; background: #3366ff; color: white; border: 2px solid #5588ff; border-radius: 8px; cursor: pointer; font-weight: bold; min-width: 100px; font-size: 12px; }
+        .bind-btn:focus { border-color: #ffff00; box-shadow: 0 0 10px #ffff00; }
+        .bind-btn.listening { background: #ffaa00; border-color: #ffcc00; animation: pulse 1s infinite;}
+
+        #settings-toggle-btn { position: absolute; top: 10px; right: 10px; font-size: 30px; background: none; border: none; cursor: pointer; z-index: 40; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        #mobile-controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 30px; box-sizing: border-box; z-index: 20; pointer-events: none; }
+        .dpad-container { pointer-events: auto; display: grid; gap: 5px; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px; }
+        #btn-up { grid-column: 2; grid-row: 1; } #btn-left { grid-column: 1; grid-row: 2; } #btn-down { grid-column: 2; grid-row: 2; } #btn-right { grid-column: 3; grid-row: 2; }
+        .touch-btn { background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.5); color: white; border-radius: 10px; width: 100%; height: 100%; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; user-select: none; }
+        .jump-container { pointer-events: auto; padding-bottom: 10px; }
+        #btn-jump-touch { width: 90px; height: 90px; border-radius: 50%; background: rgba(50, 200, 50, 0.4); border: 2px solid rgba(100, 255, 100, 0.6); color: white; font-weight: bold; font-size: 16px; display: flex; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu" class="overlay-screen">
+        <h1>GradasMen!</h1>
+        <button id="btn-play" class="menu-btn" onclick="startGame()">JUGAR</button>
+        <button id="btn-settings-main" class="menu-btn" onclick="openSettings()">PERSONALIZAR</button>
+    </div>
+
+    <div id="game-over-overlay" class="overlay-screen hidden">
+        <h1 id="overlay-title">GAME OVER</h1>
+        <button id="restart-btn" class="menu-btn" onclick="startGame()">REINTENTAR</button>
+        <button class="menu-btn" onclick="goToMenu()">MENÚ PRINCIPAL</button>
+    </div>
+
+    <div id="settings-overlay" class="overlay-screen hidden">
+        <div class="settings-panel">
+            <h2>Personalizar</h2>
+            
+            <div class="rgb-section">
+                <div id="preview-shirt-box" class="preview-box">CAMISA</div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#f55">R</span><input type="range" min="0" max="255" value="91" class="slider-r" id="shirt-r" oninput="uiUpdateRGB()"><span id="val-shirt-r" class="rgb-val">91</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#5f5">G</span><input type="range" min="0" max="255" value="110" class="slider-g" id="shirt-g" oninput="uiUpdateRGB()"><span id="val-shirt-g" class="rgb-val">110</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#55f">B</span><input type="range" min="0" max="255" value="225" class="slider-b" id="shirt-b" oninput="uiUpdateRGB()"><span id="val-shirt-b" class="rgb-val">225</span></div>
+            </div>
+
+            <div class="rgb-section">
+                <div id="preview-pants-box" class="preview-box">PANTALÓN</div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#f55">R</span><input type="range" min="0" max="255" value="223" class="slider-r" id="pants-r" oninput="uiUpdateRGB()"><span id="val-pants-r" class="rgb-val">223</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#5f5">G</span><input type="range" min="0" max="255" value="113" class="slider-g" id="pants-g" oninput="uiUpdateRGB()"><span id="val-pants-g" class="rgb-val">113</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#55f">B</span><input type="range" min="0" max="255" value="38" class="slider-b" id="pants-b" oninput="uiUpdateRGB()"><span id="val-pants-b" class="rgb-val">38</span></div>
+            </div>
+
+            <div class="rgb-section">
+                <div id="preview-hair-box" class="preview-box">CABELLO</div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#f55">R</span><input type="range" min="0" max="255" value="34" class="slider-r" id="hair-r" oninput="uiUpdateRGB()"><span id="val-hair-r" class="rgb-val">34</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#5f5">G</span><input type="range" min="0" max="255" value="32" class="slider-g" id="hair-g" oninput="uiUpdateRGB()"><span id="val-hair-g" class="rgb-val">32</span></div>
+                <div class="rgb-row"><span class="rgb-label" style="color:#55f">B</span><input type="range" min="0" max="255" value="52" class="slider-b" id="hair-b" oninput="uiUpdateRGB()"><span id="val-hair-b" class="rgb-val">52</span></div>
+            </div>
+
+            <h2>Controles</h2>
+            <div class="settings-row"><span>Arriba:</span><button id="bind-up" class="bind-btn" onclick="startRemapping('up')">Eje 1 (-)</button></div>
+            <div class="settings-row"><span>Abajo:</span><button id="bind-down" class="bind-btn" onclick="startRemapping('down')">Eje 1 (+)</button></div>
+            <div class="settings-row"><span>Izquierda:</span><button id="bind-left" class="bind-btn" onclick="startRemapping('left')">Eje 0 (-)</button></div>
+            <div class="settings-row"><span>Derecha:</span><button id="bind-right" class="bind-btn" onclick="startRemapping('right')">Eje 0 (+)</button></div>
+            <div class="settings-row"><span>Saltar:</span><button id="bind-jump" class="bind-btn" onclick="startRemapping('jump')">Botón 0</button></div>
+            
+            <button id="close-settings-btn" class="menu-btn" style="margin-top: 15px; font-size: 16px; padding: 10px;" onclick="closeSettings()">LISTO</button>
+        </div>
+    </div>
+
+    <button id="settings-toggle-btn" class="hidden" onclick="openSettings()">⚙️</button>
+
+    <div id="mobile-controls" class="hidden">
+        <div class="dpad-container">
+            <div class="touch-btn" id="btn-up">▲</div><div class="touch-btn" id="btn-left">◀</div><div class="touch-btn" id="btn-down">▼</div><div class="touch-btn" id="btn-right">▶</div>
+        </div>
+        <div class="jump-container"><div id="btn-jump-touch">SALTAR</div></div>
+    </div>
+
+    <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- CORE ---
+        const STATE = { MENU: 0, PLAYING: 1, SETTINGS: 2, GAMEOVER: 3 };
+        let currentState = STATE.MENU;
+        let gamepadMapping = { up: { type: 'axis', index: 1, sign: -1 }, down: { type: 'axis', index: 1, sign: 1 }, left: { type: 'axis', index: 0, sign: -1 }, right: { type: 'axis', index: 0, sign: 1 }, jump: { type: 'button', index: 0 } };
+        let uiDebounce = 0;
+        let remapActionTarget = null;
+        
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 10, 60);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); scene.add(hemiLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); dirLight.position.set(5, 10, 5); dirLight.castShadow = true; scene.add(dirLight);
+
+        // --- TEXTURA & COLORES ---
+        let baseImage = null; 
+        const texCanvas = document.createElement('canvas'); texCanvas.width = 160; texCanvas.height = 64; 
+        const canvasCtx = texCanvas.getContext('2d', { willReadFrequently: true });
+        const charTexture = new THREE.CanvasTexture(texCanvas);
+        charTexture.magFilter = THREE.NearestFilter; charTexture.minFilter = THREE.NearestFilter; charTexture.colorSpace = THREE.SRGBColorSpace;
+        const mainMaterial = new THREE.MeshStandardMaterial({ map: charTexture, transparent:true, alphaTest: 0.5 });
+
+        const imgLoader = new Image();
+        imgLoader.src = 'texture.png';
+        imgLoader.onload = () => { baseImage = imgLoader; updateCharacterColors(); };
+
+        window.uiUpdateRGB = function() {
+            ['shirt','pants','hair'].forEach(part => {
+                ['r','g','b'].forEach(c => {
+                    const id = `${part}-${c}`;
+                    document.getElementById(`val-${id}`).innerText = document.getElementById(id).value;
+                });
+            });
+            updateCharacterColors();
+        }
+
+        window.updateCharacterColors = function() {
+            if(!baseImage) return;
+            canvasCtx.clearRect(0,0,160,64);
+            canvasCtx.drawImage(baseImage, 0, 0);
+            const imgData = canvasCtx.getImageData(0, 0, 160, 64);
+            const data = imgData.data;
+
+            const getRGB = (id) => [parseInt(document.getElementById(`${id}-r`).value), parseInt(document.getElementById(`${id}-g`).value), parseInt(document.getElementById(`${id}-b`).value)];
+            const sRGB = getRGB('shirt');
+            const pRGB = getRGB('pants');
+            const hRGB = getRGB('hair');
+
+            ['shirt','pants','hair'].forEach(p => { const rgb = getRGB(p); document.getElementById(`preview-${p}-box`).style.backgroundColor = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; });
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i+1], b = data[i+2];
+                if (Math.abs(r-91)<10 && Math.abs(g-110)<10 && Math.abs(b-225)<10) { data[i]=sRGB[0]; data[i+1]=sRGB[1]; data[i+2]=sRGB[2]; } 
+                else if (Math.abs(r-223)<10 && Math.abs(g-113)<10 && Math.abs(b-38)<10) { data[i]=pRGB[0]; data[i+1]=pRGB[1]; data[i+2]=pRGB[2]; }
+                else if (Math.abs(r-34)<10 && Math.abs(g-32)<10 && Math.abs(b-52)<10) { data[i]=hRGB[0]; data[i+1]=hRGB[1]; data[i+2]=hRGB[2]; }
+            }
+            canvasCtx.putImageData(imgData, 0, 0);
+            charTexture.needsUpdate = true;
+        };
+
+        // --- MODELO ---
+        const playerGroup = new THREE.Group();
+        const playerMeshContainer = new THREE.Group(); 
+        playerGroup.add(playerMeshContainer);
+
+        function pixelUV(geometry, faceIndex, x, y, w, h) {
+            const texW = 160; const texH = 64;
+            const u = x / texW; const u_w = w / texW;
+            const v = 1.0 - (y + h) / texH; const v_h = h / texH;
+            const uv = geometry.attributes.uv; const i = faceIndex * 4;
+            uv.setXY(i + 0, u, v + v_h); uv.setXY(i + 1, u, v);
+            uv.setXY(i + 2, u + u_w, v + v_h); uv.setXY(i + 3, u + u_w, v);
+        }
+        
+        const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        [0,4,1,5,2,3].forEach((f, i) => { const coords=[0,32,64,96,128,96]; pixelUV(headGeo, f, coords[i], 0, 32, 32); });
+        const head = new THREE.Mesh(headGeo, mainMaterial); head.position.y = 1.3; head.castShadow = true; playerMeshContainer.add(head);
+
+        const bodyGeo = new THREE.BoxGeometry(0.6, 0.7, 0.3);
+        [4,5,0,1,2,3].forEach((f,i)=>{ const x = (i<2)?32+(i*32):0; pixelUV(bodyGeo,f,x,32,32,32);});
+        const body = new THREE.Mesh(bodyGeo, mainMaterial); body.position.y = 0.7; body.castShadow = true; playerMeshContainer.add(body);
+
+        function createLimb(w, h, d, x, y, z, texX, texW) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            [0, 1, 4, 5].forEach(face => pixelUV(geo, face, texX, 32, texW, 32));
+            pixelUV(geo, 2, texX, 32, texW, 16); pixelUV(geo, 3, texX, 32, texW, 16);
+            const mesh = new THREE.Mesh(geo, mainMaterial); mesh.position.y = -h / 2; mesh.castShadow = true;
+            const group = new THREE.Group(); group.position.set(x, y, z); group.add(mesh); playerMeshContainer.add(group);
+            return group;
+        }
+        const leftArm = createLimb(0.2, 0.6, 0.2, -0.45, 1.0, 0, 0, 16);
+        const rightArm = createLimb(0.2, 0.6, 0.2, 0.45, 1.0, 0, 16, 16);
+        const leftLeg = createLimb(0.25, 0.7, 0.25, -0.2, 0.35, 0, 128, 16);
+        const rightLeg = createLimb(0.25, 0.7, 0.25, 0.2, 0.35, 0, 144, 16);
+        scene.add(playerGroup);
+
+        // --- NIVEL ---
+        let platforms = []; let platformsMeshes = [];
+        function createPlatform(x, y, z, w, d, color=0x44aa44, isGoal=false) {
+            const mat = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), mat);
+            mesh.position.set(x, y, z); mesh.receiveShadow = true; 
+            if(isGoal) mesh.userData = { isGoal: true };
+            scene.add(mesh); platforms.push(mesh); platformsMeshes.push(mesh);
+        }
+
+        window.generateLevel = function() {
+            platforms.forEach(p => scene.remove(p)); platforms = []; platformsMeshes = [];
+            playerGroup.position.set(0, 5, 0); playerVelocity.set(0,0,0);
+            createPlatform(0, -1, 0, 6, 6);
+            let cx = 0, cy = 0, cz = -6;
+            for(let i=0; i<20; i++) {
+                const xOffset = (Math.random() - 0.5) * 6;
+                const zGap = 3 + Math.random() * 2.5;
+                const yChange = (Math.random() > 0.4) ? 0.5 : 0;
+                cx += xOffset; cz -= zGap; cy += yChange;
+                if(cx > 8) cx = 8; if(cx < -8) cx = -8;
+                createPlatform(cx, cy, cz, 2 + Math.random() * 2, 2 + Math.random() * 2);
+            }
+            createPlatform(cx, cy + 1, cz - 6, 8, 8, 0xffd700, true);
+        }
+
+        // --- FÍSICAS PREDICTIVAS (SOLUCIÓN) ---
+        let playerVelocity = new THREE.Vector3(); const gravity = 0.015; const jumpForce = 0.4; const speed = 0.15;
+        const raycaster = new THREE.Raycaster();
+        const downVector = new THREE.Vector3(0, -1, 0);
+        let landAnimationTimer = 0;
+
+        function checkGroundPhysics() {
+            // Origen: PECHO (y + 0.8)
+            const origin = playerGroup.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+            raycaster.set(origin, downVector);
+            
+            // RAYCAST PREDICTIVO: 
+            // Distancia a pies (0.8) + Distancia que recorreremos en este frame (abs(velocity.y)) + Pequeño margen
+            // Si vamos cayendo muy rápido, el rayo se estira para ver el futuro.
+            const distanceToFeet = 0.8;
+            const lookAhead = Math.max(0, -playerVelocity.y) + 0.1;
+            
+            raycaster.far = distanceToFeet + lookAhead; 
+
+            const intersects = raycaster.intersectObjects(platformsMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                if(hit.object.userData.isGoal) { endGame(true); return true; }
+
+                // Solo actuamos si estamos cayendo
+                if (playerVelocity.y <= 0) {
+                    // TELEPORT: Snap a la superficie exacta
+                    playerGroup.position.y = hit.point.y; 
+                    
+                    if (playerVelocity.y < -0.1 || !onGroundLastFrame) triggerLandAnimation();
+                    
+                    playerVelocity.y = 0;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // --- ANIMACIONES ---
+        let onGroundLastFrame = false;
+
+        function triggerLandAnimation() { landAnimationTimer = 150; }
+
+        function updateAnimations(isMoving, deltaTime) {
+            const time = Date.now() / 1000;
+            if (landAnimationTimer > 0) {
+                landAnimationTimer -= deltaTime * 1000;
+                const squashFactor = Math.sin((landAnimationTimer/150) * Math.PI); 
+                playerMeshContainer.scale.set(1 + (squashFactor * 0.2), 1 - (squashFactor * 0.3), 1 + (squashFactor * 0.2));
+                playerMeshContainer.position.y = -(1 - playerMeshContainer.scale.y) * 0.5;
+            } else {
+                playerMeshContainer.scale.lerp(new THREE.Vector3(1,1,1), 0.2);
+                playerMeshContainer.position.y = 0;
+            }
+
+            if (!checkGroundPhysics() && playerVelocity.y > 0) { // Jump Up
+                leftArm.rotation.x = Math.PI; rightArm.rotation.x = Math.PI;
+                leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
+            } 
+            else if (!checkGroundPhysics() && playerVelocity.y <= 0) { // Fall
+                const flail = Math.sin(time * 20) * 0.5;
+                leftArm.rotation.x = Math.PI * 0.8 + flail; rightArm.rotation.x = Math.PI * 0.8 - flail;
+                leftLeg.rotation.x = -0.2; rightLeg.rotation.x = 0.2;
+            }
+            else if (isMoving) { // Run
+                const a = Math.sin(time * 12) * 0.8;
+                leftArm.rotation.x = a; rightArm.rotation.x = -a; 
+                leftLeg.rotation.x = -a; rightLeg.rotation.x = a;
+            } 
+            else { // Idle
+                leftArm.rotation.x = Math.sin(time * 2) * 0.05; rightArm.rotation.x = -Math.sin(time * 2) * 0.05;
+                leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
+            }
+        }
+
+        // --- INPUT & UI ---
+        let keys = { w:false, a:false, s:false, d:false, space:false };
+        
+        window.addEventListener('keydown', (e)=>{ if(currentState!==STATE.PLAYING)return; if(e.key===' ')keys.space=true; if(['w','arrowup'].includes(e.key.toLowerCase()))keys.w=true; if(['s','arrowdown'].includes(e.key.toLowerCase()))keys.s=true; if(['a','arrowleft'].includes(e.key.toLowerCase()))keys.a=true; if(['d','arrowright'].includes(e.key.toLowerCase()))keys.d=true; });
+        window.addEventListener('keyup', (e)=>{ if(e.key===' ')keys.space=false; if(['w','arrowup'].includes(e.key.toLowerCase()))keys.w=false; if(['s','arrowdown'].includes(e.key.toLowerCase()))keys.s=false; if(['a','arrowleft'].includes(e.key.toLowerCase()))keys.a=false; if(['d','arrowright'].includes(e.key.toLowerCase()))keys.d=false; });
+        const addTouch=(id,k)=>{const b=document.getElementById(id);b.addEventListener('touchstart',(e)=>{e.preventDefault();keys[k]=true;});b.addEventListener('touchend',(e)=>{e.preventDefault();keys[k]=false;});};
+        addTouch('btn-up','w');addTouch('btn-down','s');addTouch('btn-left','a');addTouch('btn-right','d');addTouch('btn-jump-touch','space');
+
+        window.startGame = function() { currentState = STATE.PLAYING; document.getElementById('main-menu').classList.add('hidden'); document.getElementById('game-over-overlay').classList.add('hidden'); document.getElementById('mobile-controls').classList.remove('hidden'); document.getElementById('settings-toggle-btn').classList.remove('hidden'); generateLevel(); document.body.focus(); };
+        window.openSettings = function() { const prev = currentState; currentState = STATE.SETTINGS; document.getElementById('settings-overlay').classList.remove('hidden'); document.getElementById('main-menu').classList.add('hidden'); document.getElementById('settings-toggle-btn').classList.add('hidden'); document.getElementById('close-settings-btn').onclick = () => { document.getElementById('settings-overlay').classList.add('hidden'); if(prev===STATE.MENU) window.goToMenu(); else {currentState=STATE.PLAYING; document.getElementById('settings-toggle-btn').classList.remove('hidden');} }; };
+        window.goToMenu = function() { currentState = STATE.MENU; ['game-over-overlay','settings-overlay','mobile-controls','settings-toggle-btn'].forEach(id=>document.getElementById(id).classList.add('hidden')); document.getElementById('main-menu').classList.remove('hidden'); playerGroup.position.set(0,1,0); playerGroup.rotation.y = Math.PI; };
+        window.startRemapping = (a) => { remapActionTarget = a; document.getElementById(`bind-${a}`).classList.add('listening'); document.getElementById(`bind-${a}`).innerText="..."; };
+        function endGame(won) { currentState = STATE.GAMEOVER; document.getElementById('game-over-overlay').classList.remove('hidden'); document.getElementById('mobile-controls').classList.add('hidden'); document.getElementById('overlay-title').innerText = won ? "¡GANASTE!" : "GAME OVER"; }
+
+        function pollGamepad() { 
+            const gp = navigator.getGamepads()[0]; if (!gp) return; 
+            if (remapActionTarget) { for(let i=0;i<gp.buttons.length;i++)if(gp.buttons[i].pressed){gamepadMapping[remapActionTarget]={type:'button',index:i};document.getElementById(`bind-${remapActionTarget}`).innerText=`Btn ${i}`;remapActionTarget=null;return;} return; }
+            const c=(m)=>m.type==='button'?gp.buttons[m.index]?.pressed:(m.sign>0?gp.axes[m.index]>0.5:gp.axes[m.index]<-0.5);
+            if(currentState!==STATE.PLAYING) { 
+                if(Date.now()-uiDebounce<100)return; 
+                let s=currentState===STATE.MENU?'#main-menu button':(currentState===STATE.SETTINGS?'.settings-panel button, input[type=range]':'#game-over-overlay button');
+                let f=Array.from(document.querySelectorAll(s));
+                
+                // Si no hay foco activo, forzar el primero
+                if (!document.activeElement || !f.includes(document.activeElement)) { f[0].focus(); }
+                
+                let i=f.indexOf(document.activeElement);
+                
+                if(c(gamepadMapping.down)){f[(i+1)%f.length].focus();uiDebounce=Date.now()+150;}
+                if(c(gamepadMapping.up)){f[(i-1+f.length)%f.length].focus();uiDebounce=Date.now()+150;}
+                if(currentState===STATE.SETTINGS&&document.activeElement.type==='range'){
+                    let v=parseInt(document.activeElement.value);
+                    if(c(gamepadMapping.left)){document.activeElement.value=Math.max(0,v-5); window.uiUpdateRGB(); uiDebounce=Date.now();}
+                    if(c(gamepadMapping.right)){document.activeElement.value=Math.min(255,v+5); window.uiUpdateRGB(); uiDebounce=Date.now();}
+                }
+                if(c(gamepadMapping.jump)){document.activeElement.click();uiDebounce=Date.now()+300;}
+                return;
+            }
+            keys.w=c(gamepadMapping.up); keys.s=c(gamepadMapping.down); keys.a=c(gamepadMapping.left); keys.d=c(gamepadMapping.right); keys.space=c(gamepadMapping.jump);
+        }
+
+        // --- LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            pollGamepad();
+            
+            if (currentState === STATE.SETTINGS) {
+                const targetPos = playerGroup.position.clone().add(new THREE.Vector3(2, 1, 3)); 
+                camera.position.lerp(targetPos, 0.1);
+                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 1, 0))); 
+                playerGroup.rotation.y += 0.02; 
+                updateAnimations(true, 0.016);
+                renderer.render(scene, camera);
+                return;
+            } else if (currentState !== STATE.PLAYING) {
+                renderer.render(scene, camera); return;
+            }
+
+            let moveX=0, moveZ=0; 
+            if(keys.w)moveZ=-speed; if(keys.s)moveZ=speed; if(keys.a)moveX=-speed; if(keys.d)moveX=speed; 
+            if(moveX!==0||moveZ!==0) { 
+                playerGroup.position.x+=moveX; playerGroup.position.z+=moveZ; 
+                const angle = Math.atan2(moveX, moveZ);
+                const targetQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                playerGroup.quaternion.slerp(targetQ, 0.2);
+            } 
+            
+            playerVelocity.y -= gravity; 
+            playerGroup.position.y += playerVelocity.y; 
+            
+            let onGround = checkGroundPhysics();
+            if(onGround && keys.space) { playerVelocity.y = jumpForce; playerGroup.position.y += playerVelocity.y; onGround = false; } 
+            
+            if(playerGroup.position.y < -15) endGame(false); 
+            
+            updateAnimations((moveX!==0||moveZ!==0), 0.016);
+            onGroundLastFrame = onGround; 
+
+            camera.position.set(playerGroup.position.x, playerGroup.position.y+5, playerGroup.position.z+8); 
+            camera.lookAt(playerGroup.position); 
+            renderer.render(scene, camera); 
+        }
+
+        goToMenu(); animate(); 
+        window.addEventListener('resize', ()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth, window.innerHeight);});
+    </script>
+</body>
+</html>
